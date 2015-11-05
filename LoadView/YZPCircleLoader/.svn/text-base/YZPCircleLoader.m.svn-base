@@ -1,0 +1,228 @@
+//
+//  GMDCircleLoader.m
+//
+// Copyright (c) 2014 Gabe Morales
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+#import "YZPCircleLoader.h"
+
+#pragma mark - Interface
+@interface YZPCircleLoader ()
+@property (nonatomic, strong) CAShapeLayer *backgroundLayer;
+@property (nonatomic, strong) CAShapeLayer *trackLayer;
+@property (nonatomic, assign) BOOL isSpinning;
+@end
+
+@implementation YZPCircleLoader
+
+
+//-----------------------------------
+// Add the loader to view
+//-----------------------------------
+
++ (YZPCircleLoader *)setOnView:(UIView *)view withOriginPoint:(CGPoint) point{
+    return [self setOnView:view withTitle:@"加载中....." withOriginPoint:point];
+}
++ (YZPCircleLoader *)setOnView:(UIView *)view withOriginPoint:(CGPoint) point withDelay:(CGFloat)seconds{
+    return [self setOnView:view withTitle:@"加载中....." withOriginPoint:point withDelay:seconds];
+}
++ (YZPCircleLoader *)setOnView:(UIView *)view withTitle:(NSString *)title withOriginPoint:(CGPoint) point withDelay:(CGFloat)seconds
+{
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(seconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [YZPCircleLoader hideFromView:view animated:YES];
+    });
+   return  [self setOnView:view withTitle:title withOriginPoint:point];
+}
+
++ (YZPCircleLoader *)setOnView:(UIView *)view withOriginPoint:(CGPoint) point withAutoHide:(BOOL)autoHide
+{
+    if (autoHide) {
+       return  [self setOnView:view withOriginPoint:point withDelay:3.0];
+    }
+    else
+    {
+        return [self setOnView:view withOriginPoint:point];
+    }
+    
+}
++(YZPCircleLoader *)setOnView:(UIView *)view withTitle:(NSString *)title withOriginPoint:(CGPoint) point withAutoHide:(BOOL)autoHide
+{
+    if (autoHide) {
+        return [self setOnView:view withTitle:title withOriginPoint:point];
+    }
+    else
+    {
+        return [self setOnView:view withTitle:title withOriginPoint:point withDelay:3.0];
+    }
+}
+
++ (YZPCircleLoader *)setOnView:(UIView *)view withTitle:(NSString *)title withOriginPoint:(CGPoint) point {
+    
+    
+    YZPCircleLoader *hud = [[YZPCircleLoader alloc] initWithFrame:CGRectMake(point.x, point.y, 70, 70)];
+    
+        //You can add an image to the center of the spinner view
+    UIImageView *img = [[UIImageView alloc] initWithFrame:GMD_SPINNER_IMAGE];
+    img.image = GMD_IMAGE;
+    img.layer.cornerRadius=10;
+    img.clipsToBounds=YES;
+    [hud addSubview:img];
+    
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(-60.0f, 80.0f, 200.0f, 20.0f)];
+    label.font = [UIFont boldSystemFontOfSize:18.0f];
+    label.textColor = GMD_SPINNER_LINECOLOR;
+    label.textAlignment = NSTextAlignmentCenter;
+    label.text = title;
+    [hud addSubview:label];
+    
+    [hud start];
+    [view addSubview:hud];
+    return hud;
+}
+
+//------------------------------------
+// Hide the leader in view
+//------------------------------------
++ (BOOL)hideFromView:(UIView *)view animated:(BOOL)animated {
+    YZPCircleLoader *hud = [YZPCircleLoader HUDForView:view];
+    [hud stop];
+    if (hud) {
+        [hud removeFromSuperview];
+        return YES;
+    }
+    return NO;
+}
+
+//------------------------------------
+// Perform search for loader and hide it
+//------------------------------------
++ (YZPCircleLoader *)HUDForView: (UIView *)view {
+    YZPCircleLoader *hud = nil;
+    NSArray *subViewsArray = view.subviews;
+    Class hudClass = [YZPCircleLoader class];
+    for (UIView *aView in subViewsArray) {
+        if ([aView isKindOfClass:hudClass]) {
+            hud = (YZPCircleLoader *)aView;
+        }
+    }
+    return hud;
+}
+
+#pragma mark - Initialization
+- (instancetype)initWithFrame:(CGRect)frame {
+    if ((self = [super initWithFrame:frame])) {
+        [self setup];
+    }
+    return self;
+}
+
+#pragma mark - Setup
+- (void)setup {
+    self.backgroundColor = [UIColor clearColor];
+    
+    //---------------------------
+    // Set line width
+    //---------------------------
+    _lineWidth = GMD_SPINNER_LINE_WIDTH;
+    
+    //---------------------------
+    // Round Progress View
+    
+    
+    //---------------------------
+    
+
+    self.trackLayer = [CAShapeLayer layer];
+    _trackLayer.strokeColor = GMD_SPINNER_LINECOLOR.CGColor;
+    _trackLayer.fillColor = self.backgroundColor.CGColor;
+    _trackLayer.lineCap = kCALineCapRound;
+    _trackLayer.lineWidth = _lineWidth;
+    [self.layer addSublayer:_trackLayer];
+
+    self.backgroundLayer = [CAShapeLayer layer];
+    _backgroundLayer.strokeColor = GMD_SPINNER_COLOR.CGColor;
+    _backgroundLayer.fillColor = self.backgroundColor.CGColor;
+    _backgroundLayer.lineCap = kCALineCapRound;
+    _backgroundLayer.lineWidth = _lineWidth;
+    [self.layer addSublayer:_backgroundLayer];
+    
+    
+}
+
+- (void)drawRect:(CGRect)rect {
+    //-------------------------
+    // Make sure layers cover the whole view
+    //-------------------------
+    _backgroundLayer.frame = self.bounds;
+    _trackLayer.frame=self.bounds;
+}
+
+#pragma mark - Drawing
+
+- (void)drawBackgroundCircle:(BOOL) partial {
+    CGFloat startAngle = - ((float)M_PI / 2); // 90 Degrees
+    CGFloat endAngle = (2 * (float)M_PI) + startAngle;
+    CGPoint center = CGPointMake(self.bounds.size.width/2, self.bounds.size.height/2);
+    
+    CGFloat radius = (self.bounds.size.width - _lineWidth)/2;
+    
+    //----------------------
+    // Begin draw background
+    //----------------------
+    
+    UIBezierPath *processBackgroundPath = [UIBezierPath bezierPath];
+    processBackgroundPath.lineWidth = _lineWidth;
+    
+    UIBezierPath *processTrackPath = [UIBezierPath bezierPath];
+    processTrackPath.lineWidth = _lineWidth;
+    
+    //---------------------------------------
+    // Make end angle to 90% of the progress
+    //---------------------------------------
+    if (partial) {
+        endAngle = (1.8f * (float)M_PI) + startAngle;
+    }
+    [processBackgroundPath addArcWithCenter:center radius:radius startAngle:startAngle endAngle:endAngle clockwise:YES];
+     [processTrackPath addArcWithCenter:center radius:radius startAngle:0 endAngle:2*M_PI clockwise:YES];
+    _backgroundLayer.path = processBackgroundPath.CGPath;
+    _trackLayer.path=processTrackPath.CGPath;
+}
+
+#pragma mark - Spin
+- (void)start {
+    self.isSpinning = YES;
+    [self drawBackgroundCircle:YES];
+    CABasicAnimation *rotationAnimation = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
+    rotationAnimation.toValue = [NSNumber numberWithFloat:M_PI * 2.0];
+    rotationAnimation.duration = 1;
+    rotationAnimation.cumulative = YES;
+    rotationAnimation.repeatCount = HUGE_VALF;
+    [_backgroundLayer addAnimation:rotationAnimation forKey:@"rotationAnimation"];
+   
+}
+
+- (void)stop{
+    [self drawBackgroundCircle:NO];
+    [_backgroundLayer removeAllAnimations];
+    self.isSpinning = NO;
+}
+
+@end
